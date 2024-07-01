@@ -1,0 +1,17 @@
+{
+  "Version": "2008-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowPull",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage",
+        "ecr:ListImages"
+      ]
+    }
+  ]
+}

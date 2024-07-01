@@ -1,0 +1,5 @@
+/localstack/frontend/.idea/
+/localstack/frontend/chatbot/node_modules/
+/localstack/frontend/chatbot/build/
+/aws/frontend/chatbot/.idea/
+/.idea/

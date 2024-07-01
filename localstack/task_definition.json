@@ -1,0 +1,34 @@
+{
+  "family": "ollama-task",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+    {
+      "name": "ollama-container",
+      "image": "000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4510/ollama-service",
+      "essential": true,
+      "cpu": 2048,
+      "memory": 4096,
+      "portMappings": [
+        {
+          "containerPort": 11434
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "ollama-service-logs",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ollama-service"
+        }
+      },
+
+      "essential": true
+
+    }
+  ],
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "2048",
+  "memory": "4096",
+  "taskRoleArn": "arn:aws:iam::000000000000:role/ecsTaskRole",
+  "executionRoleArn": "arn:aws:iam::932043840972:role/ecsTaskExecutionRole"
+}
