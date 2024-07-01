@@ -3,3 +3,6 @@
 /localstack/frontend/chatbot/build/
 /aws/frontend/chatbot/.idea/
 /.idea/
+/localstack/volume/
+/aws/volume/
+

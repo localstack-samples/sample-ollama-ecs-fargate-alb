@@ -213,7 +213,12 @@ the full answer appears:
 
 ![Diagram](ollama-localstack.png)
 
-Notice that 
+If you look at the `App.js`, located in `frontend/chatbot/src`, you'll notice the POST call payload contains a field `stream: false`.
+For simplicity purpose we're going to receive our answer from the LLM "in bulk", rather than streamed, which could take a few seconds to
+receive it.
+
+![Diagram](ollama-call.png)
+
 
 
 
