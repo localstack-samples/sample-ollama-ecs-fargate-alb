@@ -48,31 +48,31 @@ from the load balancer to the ECS service, which will run two tasks.
 
 ## Why Ollama & Tinyllama
 
-![Diagram](tinyllama.png)
+<img src="tinyllama.png" width="500" style="float: right"/>
 
+Ollama is an open-source platform that allows users to run large language models (LLMs) locally on their devices.
+In its essence, Ollama streamlines the tasks of downloading, installing, and utilizing a broad spectrum of LLMs, enabling users to discover
+their potential without requiring deep technical skills or dependence on cloud-based platforms.
 
-Using Ollama with LocalStack for local development of cloud applications offers several advantages:
+Both tools are designed for local development, so using Ollama with LocalStack for building cloud applications offers several advantages:
 
-- Complete Local Development Environment: Combining Ollama and LocalStack allows developers to run complex cloud applications 
-entirely on their local machines. Ollama can handle large language models locally, while LocalStack simulates AWS services, 
+- **Complete local development environment**: Combining Ollama and LocalStack allows developers to run complex cloud applications 
+entirely on their local machines. Ollama can handle large language models locally, while LocalStack handles the AWS services, 
 creating a comprehensive and integrated local development environment.
-- Cost Efficiency: Running applications locally avoids the costs associated with cloud resources during development and testing. 
+
+- **Cost efficiency**: Running applications locally avoids the costs associated with cloud resources during development and testing. 
 This is particularly useful when working with large language models that can be resource-intensive and expensive to run in the cloud.
 
-- Faster Iteration Cycles: Local development with Ollama and LocalStack allows for rapid prototyping and testing. Developers can
+- **Faster iteration cycles**: Local development with Ollama and LocalStack allows for rapid prototyping and testing. Developers can
 quickly make changes and see results without the delay of deploying to the cloud. This speeds up the development cycle significantly.
 
-- Consistent Development and Production Environments: By using LocalStack to emulate AWS services, developers can ensure that their
+- **Consistent development and production environments**: By using LocalStack to emulate AWS services, developers can ensure that their
 local development environment closely matches the production environment. This reduces the risk of environment-specific bugs and 
 improves the reliability of the application when deployed to the actual cloud.
 
 - Improved Testing Capabilities: LocalStack provides a robust platform for testing AWS services, including ECS and Fargate. 
 Running Ollama as a Fargate task on LocalStack allows for testing complex deployment scenarios and interactions with other AWS 
 services, ensuring that the application behaves as expected before deploying to the cloud.
-
-- Enhanced Machine Learning Workflows: Ollama’s capability to run large language models locally means that developers can integrate 
-advanced machine learning workflows into their applications. For example, they can use Ollama for natural language processing tasks, 
-and test these workflows in a simulated cloud environment provided by LocalStack.
 
 Tinyllama is compact yet powerful, making it an ideal choice for development and testing, particularly with applications demanding a restricted
 computation and memory footprint. Depending on your needs, you can replace it with a more specialized model.
@@ -90,17 +90,15 @@ npm install
 npm run build
 ```
 
-Notice the creation of the `build` folder. The `npm run build` command is used in React applications to create an optimized, 
-production-ready version of your app. This command is responsible for transpilation into a more widely supported format, bundling of resources,
-optimizations and minifications.
+Notice the creation of the `build` folder. The `npm run build` command is responsible for transpilation into a more widely supported format, resource bundling,
+optimizations and minifications, making the application production-ready.
 
-The build folder is essential for deployment because it contains the static assets needed to run your React app in a production environment. 
-These files will be uploaded to the S3 bucket.
+The `build` folder contains the static assets needed to run our app and will be uploaded to the S3 bucket.
 
 ### Creating the stack
 
 Now we can run the bash script containing AWS CLI commands to create the necessary resources. Let’s first have a look at some of the 
-commands in the script and identify some of the resources they create:
+commands in the script and identify the resources they create:
 
 Create the VPC:
 
@@ -136,7 +134,7 @@ awslocal ec2 authorize-security-group-ingress --group-id $SG_ID1 --protocol tcp 
 export SG_ID2=$(awslocal ec2 create-security-group --group-name ContainerFromLoadBalancerSG --description "Inbound traffic from the First Load Balancer" --vpc-id $VPC_ID | jq -r '.GroupId')
 awslocal ec2 authorize-security-group-ingress --group-id $SG_ID2 --protocol tcp --port 0-65535 --source-group $SG_ID1
 ```
-Creates security groups for the load balancer and containers, allowing necessary traffic.
+Creates security groups for the load balancer and the ECS service, allowing necessary traffic.
 
 ```bash
 export LB_ARN=$(awslocal elbv2 create-load-balancer --name ecs-load-balancer --subnets $SUBNET_ID1 $SUBNET_ID2 --security-groups $SG_ID1 --scheme internet-facing | jq -r '.LoadBalancers[0].LoadBalancerArn')
@@ -199,7 +197,7 @@ Creates an S3 bucket, configures it as a website, sets the bucket policy, and sy
 If you decide to use the AWS console to create all your resources, some of the complexity of these commands will be abstracted, and
 some even will be created as dependencies of other resources.
 
-You can run the full `commands.sh` script and watch the LocalStack logs for the resources to be created.
+You can run the full `commands.sh` script and watch the LocalStack logs for updated information on the resources, as they get created.
 
 ```bash
 bash commands.sh
@@ -211,13 +209,23 @@ Now that everything is deployed, you can go to the frontend application and try 
 `http://frontend-bucket.s3-website.us-east-1.localhost.localstack.cloud:4566/` and start typing your question. It takes a few seconds, and then
 the full answer appears:
 
-![Diagram](ollama-localstack.png)
+![Frontend display](ollama-localstack.png)
 
 If you look at the `App.js`, located in `frontend/chatbot/src`, you'll notice the POST call payload contains a field `stream: false`.
 For simplicity purpose we're going to receive our answer from the LLM "in bulk", rather than streamed, which could take a few seconds to
-receive it.
+receive, until it's completely generated.
 
-![Diagram](ollama-call.png)
+![Frontend Call](ollama-call.png)
+
+The backend call will be made to the **load balancer**, `http://ecs-load-balancer.elb.localhost.localstack.cloud:4566/api/generate/`, so we don't have to worry
+about how we access the task containers.
+
+
+## Running on AWS
+
+## Conclusions
+
+
 
 
 

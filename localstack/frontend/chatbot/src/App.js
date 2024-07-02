@@ -14,7 +14,7 @@ function App() {
     setLoading(true);
     try {
       const result = await axios.post('http://ecs-load-balancer.elb.localhost.localstack.cloud:4566/api/generate/', {
-        model: 'tinyllama',
+        model: modelName,
         prompt: prompt,
         stream: false
       }, {
