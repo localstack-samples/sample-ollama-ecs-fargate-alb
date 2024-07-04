@@ -6,3 +6,6 @@
 /localstack/volume/
 /aws/volume/
 
+/aws/frontend/chatbot/node_modules/
+/aws/frontend/chatbot/build/
+/localstack/volume/

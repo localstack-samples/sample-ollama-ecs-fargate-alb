@@ -10,8 +10,7 @@
       "memory": 4096,
       "portMappings": [
         {
-          "containerPort": 11434,
-          "hostPort": 11434
+          "containerPort": 11434
         }
       ],
       "logConfiguration": {
@@ -30,7 +29,7 @@
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "2048",
   "memory": "4096",
-  "taskRoleArn": "arn:aws:iam::932043840972:role/ecsTaskRole",
-  "executionRoleArn": "arn:aws:iam::932043840972:role/ecsTaskExecutionRole"
+  "taskRoleArn": "arn:aws:iam::<your_account_number>:role/ecsTaskRole",
+  "executionRoleArn": "arn:aws:iam::<your_account_number>:role/ecsTaskExecutionRole"
 
 }
