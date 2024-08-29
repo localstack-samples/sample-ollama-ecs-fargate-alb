@@ -1,66 +1,106 @@
+/* General container styling */
 .container {
-    max-width: 800px;
-    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f5f5f7;
     padding: 20px;
-    text-align: center;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    color: #333;
-    background: #f9f9f9;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
+    overflow: hidden;
 }
 
-h1, h2 {
-    font-size: 2.5em;
+/* Chatbot styling */
+.chatbot {
+    background-color: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    width: 450px;
+    max-height: 80vh;  /* Make sure the chatbot box doesn’t exceed 80% of the viewport height */
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+}
+
+/* Header styling */
+.chatbot h1 {
+    text-align: center;
+    font-size: 24px;
     font-weight: 600;
     color: #333;
     margin-bottom: 20px;
 }
 
-
-label {
+/* Form input styling */
+.chatbot label {
     display: block;
+    font-size: 16px;
+    color: #555;
     margin-bottom: 10px;
-    font-size: 1.2em;
-    font-weight: 500;
-    color: #666;
 }
 
-input {
-    width: calc(100% - 32px);
-    padding: 15px;
-    font-size: 1.2em;
-    border: 1px solid #ccc;
-    border-radius: 8px;
+.chatbot input[type="text"] {
+    width: calc(100% - 20px);
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 12px;
+    border: 1px solid #d1d1d6;
     margin-bottom: 20px;
-    box-sizing: border-box;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-button {
-    padding: 15px 30px;
-    font-size: 1.2em;
-    color: #fff;
+/* Button styling */
+.chatbot button {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
     background-color: #007aff;
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
 
-button:hover {
+.chatbot button:hover {
     background-color: #005bb5;
 }
 
-.response {
-    margin-top: 20px;
-    font-size: 1.5em;
-    font-weight: 400;
-    color: #333;
+/* Scrollable content area */
+.chatbot .content {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 20px;
 }
 
-.loading {
-    font-size: 1.5em;
-    color: #888;
+/* Loading text styling */
+.chatbot .loading {
+    text-align: center;
+    font-size: 14px;
+    color: #777;
     margin-top: 20px;
+}
+
+/* Response styling */
+.chatbot .response {
+    margin-top: 20px;
+}
+
+.chatbot .response h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.chatbot .response p {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #333;
+    white-space: pre-wrap;
 }

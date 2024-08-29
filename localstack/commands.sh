@@ -56,10 +56,12 @@ export SG_ID2=$(awslocal ec2 create-security-group \
   --vpc-id $VPC_ID \
   | jq -r '.GroupId')
 
+ # Port # 0-65535
+
 awslocal ec2 authorize-security-group-ingress \
   --group-id $SG_ID2 \
   --protocol tcp \
-  --port 0-65535 \
+  --port 11434 \
   --source-group $SG_ID1
 
 export LB_ARN=$(awslocal elbv2 create-load-balancer \
@@ -78,7 +80,16 @@ export TG_ARN=$(awslocal elbv2 create-target-group \
   --health-check-protocol HTTP \
   --region us-east-1 \
   --health-check-path / \
+  --health-check-interval-seconds 10 \
+  --health-check-timeout-seconds 5 \
+  --healthy-threshold-count 2 \
+  --unhealthy-threshold-count 2 \
   | jq -r '.TargetGroups[0].TargetGroupArn')
+
+
+awslocal elbv2 modify-target-group-attributes \
+  --target-group-arn $TG_ARN \
+  --attributes Key=deregistration_delay.timeout_seconds,Value=10
 
 
 awslocal elbv2 create-listener \
