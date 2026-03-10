@@ -22,8 +22,8 @@ Ollama. We will start off by creating the entire stack locally  with LocalStack,
 
 ## Prerequisites
 
-- [AWS free tier account](https://aws.amazon.com/free/)
-- [LocalStack](https://localstack.cloud/)
+- A valid [LocalStack for AWS license](https://localstack.cloud/pricing). Your license provides a [`LOCALSTACK_AUTH_TOKEN`](https://docs.localstack.cloud/getting-started/auth-token/) to activate LocalStack.
+- [`localstack` CLI](https://docs.localstack.cloud/getting-started/installation/#localstack-cli).
 - [Docker](https://docs.docker.com/get-docker/) - for running LocalStack
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [AWS CLI local](https://github.com/localstack/awscli-local)
 - [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) - for building the frontend app
@@ -81,8 +81,15 @@ computation and memory footprint. Depending on your needs, you can replace it wi
 
 ### Starting LocalStack
 
-First thing we need to do is start LocalStack by using docker compose. This permits an easy visualisation of all the necessary configs.
-Remember to set your `LOCALSTACK_AUTH_TOKEN` as an environment variable.
+First thing we need to do is start LocalStack. Remember to set your `LOCALSTACK_AUTH_TOKEN` as an environment variable.
+
+```bash
+export LOCALSTACK_AUTH_TOKEN=<your-auth-token>
+make start
+make ready
+```
+
+Alternatively, you can start LocalStack using docker compose:
 
 ```bash
 cd localstack
