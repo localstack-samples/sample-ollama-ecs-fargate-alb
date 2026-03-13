@@ -89,7 +89,7 @@ make start
 make ready
 ```
 
-Alternatively, you can start LocalStack using docker compose:
+Alternatively, you can start LocalStack using Docker compose:
 
 ```bash
 cd localstack
