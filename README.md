@@ -22,10 +22,10 @@ Ollama. We will start off by creating the entire stack locally  with LocalStack,
 
 ## Prerequisites
 
-- A valid [LocalStack for AWS license](https://localstack.cloud/pricing). Your license provides a [`LOCALSTACK_AUTH_TOKEN`](https://docs.localstack.cloud/getting-started/auth-token/) to activate LocalStack.
-- [`localstack` CLI](https://docs.localstack.cloud/getting-started/installation/#localstack-cli).
+- A valid [LocalStack for AWS license](https://localstack.cloud/pricing). Your license provides a [`LOCALSTACK_AUTH_TOKEN`](https://docs.localstack.cloud/aws/getting-started/auth-token/) to activate LocalStack.
+- [`lstk` CLI](https://docs.localstack.cloud/aws/developer-tools/running-localstack/lstk/), installed via `npm install -g @localstack/lstk` or `brew install localstack/tap/lstk`.
 - [Docker](https://docs.docker.com/get-docker/) - for running LocalStack
-- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [AWS CLI local](https://github.com/localstack/awscli-local)
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html), required by `lstk aws`.
 - [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) - for building the frontend app
 
 ## Architecture Overview
@@ -86,7 +86,6 @@ First thing we need to do is start LocalStack. Remember to set your `LOCALSTACK_
 ```bash
 export LOCALSTACK_AUTH_TOKEN=<your-auth-token>
 make start
-make ready
 ```
 
 Alternatively, you can start LocalStack using Docker compose:
@@ -130,18 +129,18 @@ commands in the script and identify the resources they create:
 Create the VPC:
 
 ```bash
-export VPC_ID=$(awslocal ec2 create-vpc --cidr-block 10.0.0.0/16 | jq -r '.Vpc.VpcId')
+export VPC_ID=$(lstk aws ec2 create-vpc --cidr-block 10.0.0.0/16 | jq -r '.Vpc.VpcId')
 ````
 Creates a Virtual Private Cloud (VPC) with a specified CIDR block.
 
 ```bash
-export SUBNET_ID1=$(awslocal ec2 create-subnet \
+export SUBNET_ID1=$(lstk aws ec2 create-subnet \
   --vpc-id $VPC_ID \
   --cidr-block 10.0.1.0/24 \
   --availability-zone us-east-1a \
   | jq -r '.Subnet.SubnetId')
   
-export SUBNET_ID2=$(awslocal ec2 create-subnet \
+export SUBNET_ID2=$(lstk aws ec2 create-subnet \
   --vpc-id $VPC_ID \
   --cidr-block 10.0.2.0/24 \
   --availability-zone us-east-1b \
@@ -150,26 +149,26 @@ export SUBNET_ID2=$(awslocal ec2 create-subnet \
 Creates two subnets within the VPC, each in a different availability zone.
 
 ```bash
-export INTERNET_GW_ID=$(awslocal ec2 create-internet-gateway | jq -r '.InternetGateway.InternetGatewayId')
+export INTERNET_GW_ID=$(lstk aws ec2 create-internet-gateway | jq -r '.InternetGateway.InternetGatewayId')
 
-awslocal ec2 attach-internet-gateway \
+lstk aws ec2 attach-internet-gateway \
   --internet-gateway-id $INTERNET_GW_ID \
   --vpc-id $VPC_ID
 ```
 Creates an internet gateway and attaches it to the VPC.
 
 ```bash
-export RT_ID=$(awslocal ec2 create-route-table --vpc-id $VPC_ID | jq -r '.RouteTable.RouteTableId')
+export RT_ID=$(lstk aws ec2 create-route-table --vpc-id $VPC_ID | jq -r '.RouteTable.RouteTableId')
 
-awslocal ec2 associate-route-table \
+lstk aws ec2 associate-route-table \
   --route-table-id $RT_ID \
   --subnet-id $SUBNET_ID1
   
-awslocal ec2 associate-route-table \
+lstk aws ec2 associate-route-table \
   --route-table-id $RT_ID \
   --subnet-id $SUBNET_ID2
   
-awslocal ec2 create-route \
+lstk aws ec2 create-route \
   --route-table-id $RT_ID \
   --destination-cidr-block 0.0.0.0/0 \
   --gateway-id $INTERNET_GW_ID
@@ -177,24 +176,24 @@ awslocal ec2 create-route \
 Creates a route table, associates it with the subnets, and adds a route to the internet gateway.
 
 ```bash
-export SG_ID1=$(awslocal ec2 create-security-group \
+export SG_ID1=$(lstk aws ec2 create-security-group \
   --group-name ApplicationLoadBalancerSG \
   --description "Security Group of the Load Balancer" \
   --vpc-id $VPC_ID | jq -r '.GroupId')
   
-awslocal ec2 authorize-security-group-ingress \
+lstk aws ec2 authorize-security-group-ingress \
   --group-id $SG_ID1 \
   --protocol tcp \
   --port 80 \
   --cidr 0.0.0.0/0
 
-export SG_ID2=$(awslocal ec2 create-security-group \
+export SG_ID2=$(lstk aws ec2 create-security-group \
   --group-name ContainerFromLoadBalancerSG \
   --description "Inbound traffic from the First Load Balancer" \
   --vpc-id $VPC_ID \
   | jq -r '.GroupId')
   
-awslocal ec2 authorize-security-group-ingress \
+lstk aws ec2 authorize-security-group-ingress \
   --group-id $SG_ID2 \
   --protocol tcp \
   --port 0-65535 \
@@ -203,14 +202,14 @@ awslocal ec2 authorize-security-group-ingress \
 Creates security groups for the load balancer and the ECS service, allowing necessary traffic.
 
 ```bash
-export LB_ARN=$(awslocal elbv2 create-load-balancer \
+export LB_ARN=$(lstk aws elbv2 create-load-balancer \
   --name ecs-load-balancer \
   --subnets $SUBNET_ID1 $SUBNET_ID2 \
   --security-groups $SG_ID1 \
   --scheme internet-facing \
   | jq -r '.LoadBalancers[0].LoadBalancerArn')
   
-export TG_ARN=$(awslocal elbv2 create-target-group \
+export TG_ARN=$(lstk aws elbv2 create-target-group \
   --name ecs-targets \
   --protocol HTTP \
   --port 11434 \
@@ -221,7 +220,7 @@ export TG_ARN=$(awslocal elbv2 create-target-group \
   --health-check-path / \
   | jq -r '.TargetGroups[0].TargetGroupArn')
 
-awslocal elbv2 create-listener \
+lstk aws elbv2 create-listener \
   --load-balancer-arn $LB_ARN \
   --protocol HTTP \
   --port 11434 \
@@ -230,7 +229,7 @@ awslocal elbv2 create-listener \
 Creates an internet-facing load balancer and a target group, and sets up a listener to forward traffic.
 
 ```bash
-awslocal ecr create-repository --repository-name ollama-service
+lstk aws ecr create-repository --repository-name ollama-service
 export MODEL_NAME=tinyllama
 docker build --build-arg MODEL_NAME=$MODEL_NAME -t ollama-service .
 docker tag ollama-service:latest 000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4510/ollama-service:latest
@@ -239,53 +238,53 @@ docker push 000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4510/ollam
 Creates an ECR repository, builds the Docker image, and pushes it to the repository.
 
 ```bash
-awslocal ecs create-cluster --cluster-name OllamaCluster
+lstk aws ecs create-cluster --cluster-name OllamaCluster
 
-awslocal iam create-role \
+lstk aws iam create-role \
   --role-name ecsTaskRole \
   --assume-role-policy-document file://ecs-task-trust-policy.json
   
-export ECS_TASK_PARN=$(awslocal iam create-policy \
+export ECS_TASK_PARN=$(lstk aws iam create-policy \
   --policy-name ecsTaskPolicy \
   --policy-document file://ecs-task-policy.json \
   | jq -r '.Policy.Arn')
   
-awslocal iam attach-role-policy \
+lstk aws iam attach-role-policy \
   --role-name ecsTaskRole \
   --policy-arn $ECS_TASK_PARN
   
-awslocal iam update-assume-role-policy \
+lstk aws iam update-assume-role-policy \
   --role-name ecsTaskRole \
   --policy-document file://ecs-cloudwatch-policy.json
 
-awslocal iam create-role \
+lstk aws iam create-role \
   --role-name ecsTaskExecutionRole \
   --assume-role-policy-document file://ecs-trust-policy.json
   
-export ECS_TASK_EXEC_PARN=$(awslocal iam create-policy \
+export ECS_TASK_EXEC_PARN=$(lstk aws iam create-policy \
   --policy-name ecsTaskExecutionPolicy \
   --policy-document file://ecs-task-exec-policy.json | jq -r '.Policy.Arn')
   
-awslocal iam attach-role-policy \
+lstk aws iam attach-role-policy \
   --role-name ecsTaskExecutionRole \
   --policy-arn $ECS_TASK_EXEC_PARN
   
-awslocal iam update-assume-role-policy \
+lstk aws iam update-assume-role-policy \
   --role-name ecsTaskExecutionRole \
   --policy-document file://ecs-cloudwatch-policy.json
 ```
 Creates an ECS cluster and IAM roles with necessary policies for task execution.
 
 ```bash
-awslocal logs create-log-group --log-group-name ollama-service-logs
-awslocal ecs register-task-definition \
+lstk aws logs create-log-group --log-group-name ollama-service-logs
+lstk aws ecs register-task-definition \
   --family ollama-task \
   --cli-input-json file://task_definition.json
 ```
 Creates a CloudWatch log group and registers the ECS task definition.
 
 ```bash
-awslocal ecs create-service \
+lstk aws ecs create-service \
   --cluster OllamaCluster \
   --service-name OllamaService \
   --task-definition ollama-task \
@@ -297,10 +296,10 @@ awslocal ecs create-service \
 Creates an ECS service with the specified configuration, linking it to the load balancer.
 
 ```bash
-awslocal s3 mb s3://frontend-bucket
-awslocal s3 website s3://frontend-bucket --index-document index.html
-awslocal s3api put-bucket-policy --bucket frontend-bucket --policy file://bucket-policy.json
-awslocal s3 sync ./frontend/chatbot/build s3://frontend-bucket
+lstk aws s3 mb s3://frontend-bucket
+lstk aws s3 website s3://frontend-bucket --index-document index.html
+lstk aws s3api put-bucket-policy --bucket frontend-bucket --policy file://bucket-policy.json
+lstk aws s3 sync ./frontend/chatbot/build s3://frontend-bucket
 ```
 Creates an S3 bucket, configures it as a website, sets the bucket policy, and syncs the frontend build to the bucket.
 
