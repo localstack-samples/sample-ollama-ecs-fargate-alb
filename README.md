@@ -27,6 +27,7 @@ Ollama. We will start off by creating the entire stack locally  with LocalStack,
 - [Docker](https://docs.docker.com/get-docker/) - for running LocalStack
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html), required by `lstk aws`.
 - [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) - for building the frontend app
+- [jq](https://jqlang.github.io/jq/) - used by `commands.sh` to read resource IDs
 
 ## Architecture Overview
 
@@ -88,6 +89,8 @@ export LOCALSTACK_AUTH_TOKEN=<your-auth-token>
 make start
 ```
 
+`make start` passes the same settings as the Docker Compose file below (`DEBUG`, `ENFORCE_IAM`, `DISABLE_CORS_CHECKS` and `DISABLE_CUSTOM_CORS_S3`).
+
 Alternatively, you can start LocalStack using Docker compose:
 
 ```bash
@@ -102,6 +105,7 @@ docker compose up
 - ENFORCE_IAM=1 - This configuration enables the enforcement of AWS IAM policies in LocalStack. Normally, LocalStack runs with simplified or no security checks to facilitate development.
 - ECS_DOCKER_FLAGS=-e OLLAMA_ORIGINS="*" - This setting is used to pass environment variables to Docker containers spawned by the ECS service within LocalStack.
 Specifically, we set -e OLLAMA_ORIGINS="*" inside these containers to indicate that requests from any origin are allowed. This is relevant when integrating with web applications that may call APIs from various domains. 
+The `Dockerfile` also sets `OLLAMA_ORIGINS="*"`, so the frontend works however you start LocalStack.
 - DISABLE_CORS_CHECKS=1 - This flag disables CORS checks in LocalStack, for ease of development.
 - DISABLE_CUSTOM_CORS_S3=1 - When set, this configuration disables the custom CORS handling for S3 services within LocalStack.
 
@@ -229,13 +233,13 @@ lstk aws elbv2 create-listener \
 Creates an internet-facing load balancer and a target group, and sets up a listener to forward traffic.
 
 ```bash
-lstk aws ecr create-repository --repository-name ollama-service
+export REPOSITORY_URI=$(lstk aws ecr create-repository --repository-name ollama-service | jq -r '.repository.repositoryUri')
 export MODEL_NAME=tinyllama
 docker build --build-arg MODEL_NAME=$MODEL_NAME -t ollama-service .
-docker tag ollama-service:latest 000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4510/ollama-service:latest
-docker push 000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4510/ollama-service:latest
+docker tag ollama-service:latest $REPOSITORY_URI:latest
+docker push $REPOSITORY_URI:latest
 ```
-Creates an ECR repository, builds the Docker image, and pushes it to the repository.
+Creates an ECR repository, builds the Docker image with the model baked in, and pushes it to the repository URI that LocalStack returns.
 
 ```bash
 lstk aws ecs create-cluster --cluster-name OllamaCluster
@@ -279,9 +283,9 @@ Creates an ECS cluster and IAM roles with necessary policies for task execution.
 lstk aws logs create-log-group --log-group-name ollama-service-logs
 lstk aws ecs register-task-definition \
   --family ollama-task \
-  --cli-input-json file://task_definition.json
+  --cli-input-json "$(jq --arg image "$REPOSITORY_URI:latest" '.containerDefinitions[0].image = $image' task_definition.json)"
 ```
-Creates a CloudWatch log group and registers the ECS task definition.
+Creates a CloudWatch log group and registers the ECS task definition, pointing it at the pushed image.
 
 ```bash
 lstk aws ecs create-service \
@@ -320,15 +324,36 @@ the full answer appears:
 
 ![Frontend display](pic/ollama-localstack.png)
 
-If you look at the `App.js`, located in `frontend/chatbot/src`, you'll notice the POST call payload contains a field `stream: false`.
-For simplicity purpose we're going to receive our answer from the LLM "in bulk", rather than streamed, which could take a few seconds to
-receive, until it's completely generated.
+If you look at the `App.js`, located in `frontend/chatbot/src`, you'll notice the POST call payload contains a field `stream: true`.
+The answer is streamed back from the LLM as it is generated, and the frontend appends each chunk to the response box.
 
 ![Frontend Call](pic/ollama-call.png)
 
 The backend call will be made to the **load balancer**, `http://ecs-load-balancer.elb.localhost.localstack.cloud:4566/api/generate/`, so we don't have to worry
 about how we access the task containers.
 
+
+### Testing the stack
+
+`test.sh` checks the deployed stack end to end:
+
+- the ECS service runs both tasks, and each one is registered as a load balancer target
+- `GET /` through the load balancer returns `Ollama is running`, and `tinyllama` is listed in `/api/tags`
+- a streamed `POST /api/generate/` from the frontend's origin returns a complete answer with a CORS header
+- the S3 website serves the chatbot, and its bundle calls the load balancer
+
+The whole flow, as run in CI:
+
+```bash
+export LOCALSTACK_AUTH_TOKEN=<your-auth-token>
+make install   # lstk and the frontend dependencies
+make build     # build the React app
+make start     # start LocalStack
+make deploy    # run localstack/commands.sh
+make test      # run test.sh
+```
+
+The image is several GB, because it bundles Ollama and the model, so the first deploy takes a few minutes.
 
 ## Running on AWS
 
