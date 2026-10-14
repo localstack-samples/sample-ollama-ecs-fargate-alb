@@ -1,4 +1,6 @@
 #!/bin/bash
+set -eo pipefail
+cd "$(dirname "$0")"
 
 export VPC_ID=$(lstk aws ec2 create-vpc --cidr-block 10.0.0.0/16 | jq -r '.Vpc.VpcId')
 
@@ -101,14 +103,15 @@ lstk aws elbv2 create-listener \
 # Create repository for the image
 
 
-lstk aws ecr create-repository --repository-name ollama-service
+export REPOSITORY_URI=$(lstk aws ecr create-repository --repository-name ollama-service \
+  | jq -r '.repository.repositoryUri')
 
-export MODEL_NAME=tinyllama
+export MODEL_NAME=${MODEL_NAME:-tinyllama}
 
 docker build --build-arg MODEL_NAME=$MODEL_NAME -t ollama-service .
 
-docker tag ollama-service:latest 000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4510/ollama-service:latest
-docker push 000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4510/ollama-service:latest
+docker tag ollama-service:latest $REPOSITORY_URI:latest
+docker push $REPOSITORY_URI:latest
 
 lstk aws ecs create-cluster --cluster-name OllamaCluster
 
@@ -151,7 +154,7 @@ lstk aws logs create-log-group --log-group-name ollama-service-logs
 
 lstk aws ecs register-task-definition \
   --family ollama-task \
-  --cli-input-json file://task_definition.json
+  --cli-input-json "$(jq --arg image "$REPOSITORY_URI:latest" '.containerDefinitions[0].image = $image' task_definition.json)"
 
 
 lstk aws ecs create-service \

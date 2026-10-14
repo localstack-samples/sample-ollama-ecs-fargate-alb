@@ -1,0 +1,65 @@
+name: Deploy on LocalStack
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ollama:
+    name: Run Ollama on ECS behind the ALB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: localstack/frontend/chatbot/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          make install
+          lstk setup aws --force --non-interactive
+
+      - name: Build the frontend
+        run: make build
+
+      - name: Start LocalStack
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+        run: make start
+
+      - name: Deploy the stack
+        run: make deploy
+
+      - name: Run tests
+        run: make test
+
+      - name: Show ECS, load balancer and LocalStack state
+        if: failure()
+        run: |
+          lstk aws ecs describe-services --cluster OllamaCluster --services OllamaService \
+            --query 'services[0].{desired: desiredCount, running: runningCount, events: events[:5]}' || true
+          lstk aws ecs list-tasks --cluster OllamaCluster || true
+          tg=$(lstk aws elbv2 describe-target-groups --names ecs-targets --query 'TargetGroups[0].TargetGroupArn' --output text || true)
+          [ -n "$tg" ] && lstk aws elbv2 describe-target-health --target-group-arn "$tg" || true
+          docker ps -a
+          docker images
+          df -h /
+          free -m
+          for c in $(docker ps -aq --filter name=ls-ecs); do docker logs --tail 50 "$c" || true; done
+          lstk logs | tail -300

@@ -4,7 +4,7 @@
   "containerDefinitions": [
     {
       "name": "ollama-container",
-      "image": "000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4510/ollama-service",
+      "image": "000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4566/ollama-service:latest",
       "essential": true,
       "cpu": 2048,
       "memory": 4096,
